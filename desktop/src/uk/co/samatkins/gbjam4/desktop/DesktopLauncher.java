@@ -7,8 +7,8 @@ import uk.co.samatkins.gbjam4.GBJam4;
 public class DesktopLauncher {
 	public static void main (String[] arg) {
 		LwjglApplicationConfiguration config = new LwjglApplicationConfiguration();
-		config.width = 320;
-		config.height = 288;
+		config.width = 640;
+		config.height = 576;
 		new LwjglApplication(new GBJam4(), config);
 	}
 }
