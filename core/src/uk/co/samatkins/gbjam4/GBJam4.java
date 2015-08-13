@@ -26,7 +26,9 @@ public class GBJam4 extends ApplicationAdapter {
 								Black = new Color( 32f/255f,  70f/255f,  49f/255f, 1);
 	}
 	public static final int SCREEN_WIDTH = 160,
-							SCREEN_HEIGHT = 144;
+							SCREEN_HEIGHT = 144,
+							SCREEN_HALF_WIDTH = SCREEN_WIDTH / 2,
+							SCREEN_HALF_HEIGHT = SCREEN_HEIGHT / 2;
 
 	public TextureAtlas textureAtlas;
 	public Viewport viewport;
@@ -43,7 +45,7 @@ public class GBJam4 extends ApplicationAdapter {
 
 		textureAtlas = new TextureAtlas("packed.atlas");
 
-		scene = new MenuScene(this);
+		setScene(new MenuScene(this));
 	}
 
 	@Override
@@ -61,14 +63,26 @@ public class GBJam4 extends ApplicationAdapter {
 
 		shapeRenderer.setProjectionMatrix(viewport.getCamera().combined);
 		spriteBatch.setProjectionMatrix(viewport.getCamera().combined);
-
-		shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
-
-		shapeRenderer.setColor(Palette.Black);
-		shapeRenderer.rect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
-
-		shapeRenderer.end();
+//
+//		shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
+//
+//		shapeRenderer.setColor(Palette.Black);
+//		shapeRenderer.rect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+//
+//		shapeRenderer.end();
 
 		scene.render(delta, spriteBatch, shapeRenderer);
+	}
+
+	private void setScene(Scene scene) {
+//		if (this.scene != null) {
+//			this.scene.dispose();
+//		}
+		this.scene = scene;
+//		this.scene.onCreate();
+	}
+
+	public void startGame() {
+		setScene(new PlayScene(this));
 	}
 }

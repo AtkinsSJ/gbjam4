@@ -1,5 +1,7 @@
 package uk.co.samatkins.gbjam4;
 
+import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.Input;
 import com.badlogic.gdx.InputAdapter;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureAtlas;
@@ -18,6 +20,11 @@ public class MenuScene extends InputAdapter
 
 	@Override
 	public void render(float delta, SpriteBatch batch, ShapeRenderer shapeRenderer) {
+
+		if (Gdx.input.isKeyJustPressed(Input.Keys.SPACE)) {
+			game.startGame();
+		}
+
 		batch.begin();
 
 		batch.draw(menuTexture, 0, 0);
