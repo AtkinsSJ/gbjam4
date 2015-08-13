@@ -86,7 +86,7 @@ public class PlayScene extends InputAdapter
 				wallDistance += rayStepLength;
 				if (levelGeometry[(int) rayPosition.x][(int) rayPosition.y] > 0) {
 					// We hit something!
-					float wallHeight = GBJam4.SCREEN_HEIGHT / wallDistance;
+					float wallHeight = MathUtils.round(GBJam4.SCREEN_HEIGHT / wallDistance * 0.5f) * 2;
 					shapeRenderer.setColor(GBJam4.Palette.Black);
 					shapeRenderer.rect(rayIndex, (GBJam4.SCREEN_HEIGHT - wallHeight) / 2, 1, wallHeight);
 //					Gdx.app.debug("Hit a wall!", "Distance: " + wallDistance + ", wall height: " + wallHeight);
