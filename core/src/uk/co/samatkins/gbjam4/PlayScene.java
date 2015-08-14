@@ -53,19 +53,23 @@ public class PlayScene extends InputAdapter
 	@Override
 	public void render(float delta, SpriteBatch batch, ShapeRenderer shapeRenderer) {
 
+		final float screenWidth = GBJam4.SCREEN_WIDTH,
+					screenHeight = GBJam4.SCREEN_HEIGHT,
+					screenHalfWidth = GBJam4.SCREEN_HALF_WIDTH,
+					screenHalfHeight = GBJam4.SCREEN_HALF_HEIGHT;
+
 		// Player controls
-		if (Gdx.input.isKeyPressed(Input.Keys.A)) {
+		if (Gdx.input.isKeyPressed(Input.Keys.A) || Gdx.input.isKeyPressed(Input.Keys.LEFT)) {
 			playerFacingDirection -= delta * 90;
-		} else if (Gdx.input.isKeyPressed(Input.Keys.D)) {
+		} else if (Gdx.input.isKeyPressed(Input.Keys.D) || Gdx.input.isKeyPressed(Input.Keys.RIGHT)) {
 			playerFacingDirection += delta * 90;
 		}
 
-		if (Gdx.input.isKeyPressed(Input.Keys.W)) {
+		if (Gdx.input.isKeyPressed(Input.Keys.W) || Gdx.input.isKeyPressed(Input.Keys.UP)) {
 			playerPosition.add(MathUtils.cosDeg(playerFacingDirection) * delta, MathUtils.sinDeg(playerFacingDirection) * delta);
-		} else if (Gdx.input.isKeyPressed(Input.Keys.S)) {
+		} else if (Gdx.input.isKeyPressed(Input.Keys.S) || Gdx.input.isKeyPressed(Input.Keys.DOWN)) {
 			playerPosition.sub(MathUtils.cosDeg(playerFacingDirection) * delta, MathUtils.sinDeg(playerFacingDirection) * delta);
 		}
-
 
 		shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
 
@@ -77,90 +81,94 @@ public class PlayScene extends InputAdapter
 
 		// RAYS!
 		// http://lodev.org/cgtutor/raycasting.html
-		cameraPlane.set(
-			MathUtils.cosDeg(playerFacingDirection - 90) * cameraHalfWidth,
-			MathUtils.sinDeg(playerFacingDirection - 90) * cameraHalfWidth
-		);
-		cameraFacing.set(
-			MathUtils.cosDeg(playerFacingDirection) * cameraDistance,
-			MathUtils.sinDeg(playerFacingDirection) * cameraDistance
-		);
-		int dirX = (cameraFacing.x > 0) ? 1 : -1;
-		int dirY = (cameraFacing.y > 0) ? 1 : -1;
-
-		for (int rayIndex=0; rayIndex < GBJam4.SCREEN_WIDTH; rayIndex++) {
-			float rayCameraX = 2 * rayIndex / GBJam4.SCREEN_HALF_WIDTH - 1;
-			rayPos.set(playerPosition);
-			rayDir.set(
-				dirX + cameraPlane.x * rayCameraX,
-				dirY + cameraPlane.y * rayCameraX
+		{
+			cameraPlane.set(
+				MathUtils.cosDeg(playerFacingDirection + 90) * cameraHalfWidth,
+				MathUtils.sinDeg(playerFacingDirection + 90) * cameraHalfWidth
 			);
+			cameraFacing.set(
+				MathUtils.cosDeg(playerFacingDirection) * cameraDistance,
+				MathUtils.sinDeg(playerFacingDirection) * cameraDistance
+			);
+			float dirX = (cameraFacing.x > 0) ? 1 : -1;
+			float dirY = (cameraFacing.y > 0) ? 1 : -1;
 
-			int mapX = (int)rayPos.x,
-				mapY = (int)rayPos.y;
+			for (int rayIndex = 0; rayIndex < GBJam4.SCREEN_WIDTH; rayIndex++) {
+				float rayCameraX = 2 * rayIndex / screenHalfWidth - 1;
+				rayPos.set(playerPosition);
+				rayDir.set(
+					dirX + cameraPlane.x * rayCameraX,
+					dirY + cameraPlane.y * rayCameraX
+				);
 
-			// Distance to next x or y side
-			float sideDistX, sideDistY;
+				int mapX = (int) rayPos.x,
+					mapY = (int) rayPos.y;
 
-			// Distance from one x or y side to the next x or y side
-			float deltaDistX = (float) Math.sqrt(1 + (rayDir.y * rayDir.y) / (rayDir.x * rayDir.x));
-			float deltaDistY = (float) Math.sqrt(1 + (rayDir.x * rayDir.x) / (rayDir.y * rayDir.y));
-			float perpWallDist;
+				// Distance to next x or y side
+				float sideDistX, sideDistY;
 
-			int stepX, stepY;
-			boolean hit = false;
-			boolean sideHitIsY = false; // If true, wall faces N/S, else it faces E/W
+				// Distance from one x or y side to the next x or y side
+				float deltaDistX = (float) Math.sqrt(1 + (rayDir.y * rayDir.y) / (rayDir.x * rayDir.x));
+				float deltaDistY = (float) Math.sqrt(1 + (rayDir.x * rayDir.x) / (rayDir.y * rayDir.y));
+				float perpWallDist;
 
-			//calculate step and initial sideDist
-			if (rayDir.x < 0) {
-				stepX = -1;
-				sideDistX = (rayPos.x - mapX) * deltaDistX;
-			} else {
-				stepX = 1;
-				sideDistX = (mapX + 1.0f - rayPos.x) * deltaDistX;
-			}
-			if (rayDir.y < 0) {
-				stepY = -1;
-				sideDistY = (rayPos.y - mapY) * deltaDistY;
-			} else {
-				stepY = 1;
-				sideDistY = (mapY + 1.0f - rayPos.y) * deltaDistY;
-			}
+				int stepX, stepY;
+				boolean hit = false;
+				boolean sideHitIsY = false; // If true, wall faces N/S, else it faces E/W
 
-			// DDA
-			while (!hit) {
-				if (sideDistX < sideDistY) {
-					sideDistX += deltaDistX;
-					mapX += stepX;
-					sideHitIsY = false;
+				//calculate step and initial sideDist
+				if (rayDir.x < 0) {
+					stepX = -1;
+					sideDistX = (rayPos.x - mapX) * deltaDistX;
 				} else {
-					sideDistY += deltaDistY;
-					mapY += stepY;
-					sideHitIsY = true;
+					stepX = 1;
+					sideDistX = (mapX + 1.0f - rayPos.x) * deltaDistX;
 				}
-				// Did we hit?
-				if (levelGeometry[mapX][mapY] > 0) {
-					hit = true;
+				if (rayDir.y < 0) {
+					stepY = -1;
+					sideDistY = (rayPos.y - mapY) * deltaDistY;
+				} else {
+					stepY = 1;
+					sideDistY = (mapY + 1.0f - rayPos.y) * deltaDistY;
 				}
+
+				// DDA
+				while (!hit) {
+					if (sideDistX < sideDistY) {
+						sideDistX += deltaDistX;
+						mapX += stepX;
+						sideHitIsY = false;
+					} else {
+						sideDistY += deltaDistY;
+						mapY += stepY;
+						sideHitIsY = true;
+					}
+					// Did we hit?
+					if (levelGeometry[mapX][mapY] > 0) {
+						hit = true;
+					}
+				}
+
+				// Calculate distance to wall
+				if (!sideHitIsY) {
+					perpWallDist = Math.abs((mapX - rayPos.x + (1 - stepX) / 2f) / rayDir.x);
+				} else {
+					perpWallDist = Math.abs((mapY - rayPos.y + (1 - stepY) / 2f) / rayDir.y);
+				}
+
+				int lineHeight = Math.abs((int) (screenHeight / perpWallDist));
+				lineHeight = MathUtils.clamp(lineHeight, 2, GBJam4.SCREEN_HEIGHT);
+
+				if (sideHitIsY) {
+					shapeRenderer.setColor(GBJam4.Palette.Dark);
+				} else {
+					shapeRenderer.setColor(GBJam4.Palette.Black);
+				}
+
+//				shapeRenderer.setColor(sideHitIsY ? 1 : 0, (float)rayIndex /  screenWidth, 0, 1);
+
+				shapeRenderer.rect(rayIndex, (GBJam4.SCREEN_HEIGHT - lineHeight) / 2, 1, lineHeight);
 			}
-
-			// Calculate distance to wall
-			if (!sideHitIsY) {
-				perpWallDist = Math.abs((mapX - rayPos.x + (1 - stepX) / 2) / rayDir.x);
-			} else {
-				perpWallDist = Math.abs((mapY - rayPos.y + (1 - stepY) / 2) / rayDir.y);
-			}
-
-			int lineHeight = Math.abs((int)(GBJam4.SCREEN_HEIGHT / perpWallDist));
-			lineHeight = MathUtils.clamp(lineHeight, 2, GBJam4.SCREEN_HEIGHT);
-
-			if (sideHitIsY) {
-				shapeRenderer.setColor(GBJam4.Palette.Dark);
-			} else {
-				shapeRenderer.setColor(GBJam4.Palette.Black);
-			}
-
-			shapeRenderer.rect(rayIndex, (GBJam4.SCREEN_HEIGHT - lineHeight) / 2, 1, lineHeight);
 		}
 
 //////////////////////////////////////
