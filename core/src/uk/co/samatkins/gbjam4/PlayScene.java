@@ -30,9 +30,7 @@ public class PlayScene extends InputAdapter
 	private final Vector2 rayPos = new Vector2();
 	private final Vector2 rayDir = new Vector2();
 
-//	private static final float rayStepLength = 0.1f;
-//	private final Vector2 rayPosition = new Vector2();
-//	private final Vector2 rayStep = new Vector2();
+	private boolean debugRenderingEnabled = false;
 
 	public PlayScene(GBJam4 game) {
 		this.game = game;
@@ -81,36 +79,36 @@ public class PlayScene extends InputAdapter
 		Gdx.app.debug("playerFacingDirection", playerFacingDirection + "");
 
 		cameraFacing.set(
-			MathUtils.cosDeg(playerFacingDirection) * cameraHalfWidth,
-			MathUtils.sinDeg(playerFacingDirection) * cameraHalfWidth
+			MathUtils.cosDeg(playerFacingDirection) * cameraDistance,
+			MathUtils.sinDeg(playerFacingDirection) * cameraDistance
 		);
 		cameraPlane.set(
 			MathUtils.cosDeg(playerFacingDirection - 90f) * cameraHalfWidth,
 			MathUtils.sinDeg(playerFacingDirection - 90f) * cameraHalfWidth
 		);
-		int dirX = (cameraFacing.x > 0) ? 1 : -1;
-		int dirY = (cameraFacing.y > 0) ? 1 : -1;
 
 		if (Gdx.input.isKeyPressed(Input.Keys.W) || Gdx.input.isKeyPressed(Input.Keys.UP)) {
-			if (levelGeometry[(int)(playerPosition.x + dirX)][(int)(playerPosition.y)] == 0) {
+			if (levelGeometry[(int)(playerPosition.x + cameraFacing.x)][(int)(playerPosition.y)] == 0) {
 				playerPosition.x += MathUtils.cosDeg(playerFacingDirection) * delta;
 			}
-			if (levelGeometry[(int)(playerPosition.x)][(int)(playerPosition.y + dirY)] == 0) {
+			if (levelGeometry[(int)(playerPosition.x)][(int)(playerPosition.y + cameraFacing.y)] == 0) {
 				playerPosition.y += MathUtils.sinDeg(playerFacingDirection) * delta;
 			}
 
 		} else if (Gdx.input.isKeyPressed(Input.Keys.S) || Gdx.input.isKeyPressed(Input.Keys.DOWN)) {
 
-			if (levelGeometry[(int)(playerPosition.x - dirX)][(int)(playerPosition.y)] == 0) {
+			if (levelGeometry[(int)(playerPosition.x - cameraFacing.x)][(int)(playerPosition.y)] == 0) {
 				playerPosition.x -= MathUtils.cosDeg(playerFacingDirection) * delta;
 			}
-			if (levelGeometry[(int)(playerPosition.x)][(int)(playerPosition.y - dirY)] == 0) {
+			if (levelGeometry[(int)(playerPosition.x)][(int)(playerPosition.y - cameraFacing.y)] == 0) {
 				playerPosition.y -= MathUtils.sinDeg(playerFacingDirection) * delta;
 			}
 		}
 
-		Gdx.gl.glEnable(GL20.GL_BLEND);
-		Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
+		if (debugRenderingEnabled) {
+			Gdx.gl.glEnable(GL20.GL_BLEND);
+			Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
+		}
 		shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
 
 		// Floor and ceiling
@@ -127,10 +125,9 @@ public class PlayScene extends InputAdapter
 				float rayCameraX = 2 * rayIndex / screenWidth - 1;
 				rayPos.set(playerPosition);
 				rayDir.set(
-					dirX + cameraPlane.x * rayCameraX,
-					dirY + cameraPlane.y * rayCameraX
+					cameraFacing.x + cameraPlane.x * rayCameraX,
+					cameraFacing.y + cameraPlane.y * rayCameraX
 				);
-//				Gdx.app.debug("Raycast", "Ray #" + rayIndex + ", angle " + rayDir.angle());
 
 				int mapX = (int) rayPos.x,
 					mapY = (int) rayPos.y;
@@ -197,43 +194,12 @@ public class PlayScene extends InputAdapter
 					shapeRenderer.setColor(GBJam4.Palette.Black);
 				}
 
-//				shapeRenderer.setColor(sideHitIsY ? 1 : 0, (float)rayIndex /  screenWidth, 0, 1);
-
 				shapeRenderer.rect(rayIndex, (GBJam4.SCREEN_HEIGHT - lineHeight) / 2, 1, lineHeight);
 			}
 		}
 
-		Gdx.app.debug("Raycast", "Done!");
-//////////////////////////////////////
-//		rayStep.set(MathUtils.cosDeg(playerFacingDirection), MathUtils.sinDeg(playerFacingDirection));
-//
-//		float offsetStepX = -rayStep.y * 0.01f;
-//		float offsetStepY = rayStep.x * 0.01f;
-//
-//		rayStep.scl(rayStepLength);
-//
-//		for (int rayIndex = 0; rayIndex < GBJam4.SCREEN_WIDTH; rayIndex++) {
-//			rayPosition.set(playerPosition);
-//			float offset = (rayIndex - GBJam4.SCREEN_HALF_WIDTH);
-//			rayPosition.add(offset * offsetStepX, offset * offsetStepY);
-//
-//			float wallDistance = 0;
-//			while (true) {
-//				rayPosition.add(rayStep);
-//				wallDistance += rayStepLength;
-//				if (levelGeometry[(int) rayPosition.x][(int) rayPosition.y] > 0) {
-//					// We hit something!
-//					float wallHeight = MathUtils.round(GBJam4.SCREEN_HEIGHT / wallDistance * 0.5f) * 2;
-//					shapeRenderer.setColor(GBJam4.Palette.Black);
-//					shapeRenderer.rect(rayIndex, (GBJam4.SCREEN_HEIGHT - wallHeight) / 2, 1, wallHeight);
-////					Gdx.app.debug("Hit a wall!", "Distance: " + wallDistance + ", wall height: " + wallHeight);
-//					break;
-//				}
-//			}
-//		}
-
 		// Debug rendering!
-		{
+		if (debugRenderingEnabled) {
 			float scale = Math.min(screenWidth, screenHeight) / Math.max(levelWidth, levelHeight);
 			for (int x = 0; x < levelWidth; x++) {
 				for (int y = 0; y < levelHeight; y++) {
@@ -251,8 +217,8 @@ public class PlayScene extends InputAdapter
 			shapeRenderer.setColor(1, 0, 0, 0.5f);
 			float px = playerPosition.x * scale;
 			float py = playerPosition.y * scale;
-			float cx = px + (cameraFacing.x * 4 * scale);
-			float cy = py + (cameraFacing.y * 4 * scale);
+			float cx = px + (cameraFacing.x * scale);
+			float cy = py + (cameraFacing.y * scale);
 
 			shapeRenderer.circle(px, py, 1f * scale);
 
@@ -262,16 +228,17 @@ public class PlayScene extends InputAdapter
 			// Camera
 			shapeRenderer.setColor(0, 0, 1, 0.5f);
 			shapeRenderer.rectLine(
-				cx - (cameraPlane.x * 4 * scale),
-				cy - (cameraPlane.y * 4 * scale),
-				cx + (cameraPlane.x * 4 * scale),
-				cy + (cameraPlane.y * 4 * scale),
+				cx - (cameraPlane.x * scale),
+				cy - (cameraPlane.y * scale),
+				cx + (cameraPlane.x * scale),
+				cy + (cameraPlane.y * scale),
 				1
 			);
 		}
 
 		shapeRenderer.end();
-		Gdx.gl.glDisable(GL20.GL_BLEND);
-
+		if (debugRenderingEnabled) {
+			Gdx.gl.glDisable(GL20.GL_BLEND);
+		}
 	}
 }
