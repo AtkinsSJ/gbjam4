@@ -3,6 +3,7 @@ package uk.co.samatkins.gbjam4;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.InputAdapter;
+import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
@@ -14,7 +15,9 @@ public class PlayScene extends InputAdapter
 
 	private final GBJam4 game;
 
+	private final int levelWidth, levelHeight;
 	private final int levelGeometry[][];
+	private final boolean visibleTiles[][];
 
 	private final Vector2 playerPosition = new Vector2();
 	private float playerFacingDirection;
@@ -36,7 +39,10 @@ public class PlayScene extends InputAdapter
 
 		Pixmap pixmap = new Pixmap(Gdx.files.internal("level.png"));
 
-		levelGeometry = new int[pixmap.getWidth()][pixmap.getHeight()];
+		levelWidth = pixmap.getWidth();
+		levelHeight = pixmap.getHeight();
+		levelGeometry = new int[levelWidth][levelHeight];
+		visibleTiles = new boolean[levelWidth][levelHeight];
 		for (int y=0; y<pixmap.getWidth(); y++) {
 			for (int x=0; x<pixmap.getHeight(); x++) {
 				int pixel = pixmap.getPixel(x,y);
@@ -53,6 +59,12 @@ public class PlayScene extends InputAdapter
 	@Override
 	public void render(float delta, SpriteBatch batch, ShapeRenderer shapeRenderer) {
 
+		for (int x = 0; x < levelWidth; x++) {
+			for (int y = 0; y < levelHeight; y++) {
+				visibleTiles[x][y] = false;
+			}
+		}
+
 		final float screenWidth = GBJam4.SCREEN_WIDTH,
 					screenHeight = GBJam4.SCREEN_HEIGHT,
 					screenHalfWidth = GBJam4.SCREEN_HALF_WIDTH,
@@ -60,17 +72,44 @@ public class PlayScene extends InputAdapter
 
 		// Player controls
 		if (Gdx.input.isKeyPressed(Input.Keys.A) || Gdx.input.isKeyPressed(Input.Keys.LEFT)) {
-			playerFacingDirection -= delta * 90;
-		} else if (Gdx.input.isKeyPressed(Input.Keys.D) || Gdx.input.isKeyPressed(Input.Keys.RIGHT)) {
 			playerFacingDirection += delta * 90;
+		} else if (Gdx.input.isKeyPressed(Input.Keys.D) || Gdx.input.isKeyPressed(Input.Keys.RIGHT)) {
+			playerFacingDirection -= delta * 90;
 		}
+
+		playerFacingDirection = (playerFacingDirection + 360) % 360;
+
+		cameraFacing.set(
+			MathUtils.cosDeg(playerFacingDirection) * cameraHalfWidth,
+			MathUtils.sinDeg(playerFacingDirection) * cameraHalfWidth
+		);
+		cameraPlane.set(
+			cameraFacing.y,
+			-cameraFacing.x
+		);
+		float dirX = (cameraFacing.x > 0) ? 1 : -1;
+		float dirY = (cameraFacing.y > 0) ? 1 : -1;
 
 		if (Gdx.input.isKeyPressed(Input.Keys.W) || Gdx.input.isKeyPressed(Input.Keys.UP)) {
-			playerPosition.add(MathUtils.cosDeg(playerFacingDirection) * delta, MathUtils.sinDeg(playerFacingDirection) * delta);
+			if (levelGeometry[(int)(playerPosition.x + dirX)][(int)(playerPosition.y)] == 0) {
+				playerPosition.x += MathUtils.cosDeg(playerFacingDirection) * delta;
+			}
+			if (levelGeometry[(int)(playerPosition.x)][(int)(playerPosition.y + dirY)] == 0) {
+				playerPosition.y += MathUtils.sinDeg(playerFacingDirection) * delta;
+			}
+
 		} else if (Gdx.input.isKeyPressed(Input.Keys.S) || Gdx.input.isKeyPressed(Input.Keys.DOWN)) {
-			playerPosition.sub(MathUtils.cosDeg(playerFacingDirection) * delta, MathUtils.sinDeg(playerFacingDirection) * delta);
+
+			if (levelGeometry[(int)(playerPosition.x - dirX)][(int)(playerPosition.y)] == 0) {
+				playerPosition.x -= MathUtils.cosDeg(playerFacingDirection) * delta;
+			}
+			if (levelGeometry[(int)(playerPosition.x)][(int)(playerPosition.y - dirY)] == 0) {
+				playerPosition.y -= MathUtils.sinDeg(playerFacingDirection) * delta;
+			}
 		}
 
+		Gdx.gl.glEnable(GL20.GL_BLEND);
+		Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
 		shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
 
 		// Floor and ceiling
@@ -82,19 +121,14 @@ public class PlayScene extends InputAdapter
 		// RAYS!
 		// http://lodev.org/cgtutor/raycasting.html
 		{
-			cameraPlane.set(
-				MathUtils.cosDeg(playerFacingDirection + 90) * cameraHalfWidth,
-				MathUtils.sinDeg(playerFacingDirection + 90) * cameraHalfWidth
-			);
-			cameraFacing.set(
-				MathUtils.cosDeg(playerFacingDirection) * cameraDistance,
-				MathUtils.sinDeg(playerFacingDirection) * cameraDistance
-			);
-			float dirX = (cameraFacing.x > 0) ? 1 : -1;
-			float dirY = (cameraFacing.y > 0) ? 1 : -1;
+
+			Gdx.app.debug("Raytracing", "PlayerFacing angle: " + playerFacingDirection);
+			Gdx.app.debug("Raytracing", "CameraFacing angle: " + cameraFacing.angle());
+			Gdx.app.debug("Raytracing", "CameraPlane angle: " + cameraPlane.angle());
+			Gdx.app.debug("---", "---");
 
 			for (int rayIndex = 0; rayIndex < GBJam4.SCREEN_WIDTH; rayIndex++) {
-				float rayCameraX = 2 * rayIndex / screenHalfWidth - 1;
+				float rayCameraX = (float)(2 * rayIndex) / screenHalfWidth - 1;
 				rayPos.set(playerPosition);
 				rayDir.set(
 					dirX + cameraPlane.x * rayCameraX,
@@ -108,8 +142,8 @@ public class PlayScene extends InputAdapter
 				float sideDistX, sideDistY;
 
 				// Distance from one x or y side to the next x or y side
-				float deltaDistX = (float) Math.sqrt(1 + (rayDir.y * rayDir.y) / (rayDir.x * rayDir.x));
-				float deltaDistY = (float) Math.sqrt(1 + (rayDir.x * rayDir.x) / (rayDir.y * rayDir.y));
+				float deltaDistX = (float) Math.sqrt(1f + (rayDir.y * rayDir.y) / (rayDir.x * rayDir.x));
+				float deltaDistY = (float) Math.sqrt(1f + (rayDir.x * rayDir.x) / (rayDir.y * rayDir.y));
 				float perpWallDist;
 
 				int stepX, stepY;
@@ -143,6 +177,7 @@ public class PlayScene extends InputAdapter
 						mapY += stepY;
 						sideHitIsY = true;
 					}
+					visibleTiles[mapX][mapY] = true;
 					// Did we hit?
 					if (levelGeometry[mapX][mapY] > 0) {
 						hit = true;
@@ -199,6 +234,46 @@ public class PlayScene extends InputAdapter
 //			}
 //		}
 
+		// Debug rendering!
+		{
+			float scale = Math.min(screenWidth, screenHeight) / Math.max(levelWidth, levelHeight);
+			for (int x = 0; x < levelWidth; x++) {
+				for (int y = 0; y < levelHeight; y++) {
+
+					if (visibleTiles[x][y]) {
+						shapeRenderer.setColor(1, 1, 1, 0.5f);
+						shapeRenderer.rect(x*scale, y*scale, 1*scale, 1*scale);
+					} else if (levelGeometry[x][y] > 0) {
+						shapeRenderer.setColor(0, 0, 0, 0.5f);
+						shapeRenderer.rect(x*scale, y*scale, 1*scale, 1*scale);
+					}
+				}
+			}
+
+			shapeRenderer.setColor(1, 0, 0, 0.5f);
+			float px = playerPosition.x * scale;
+			float py = playerPosition.y * scale;
+			float cx = px + (cameraFacing.x * 4 * scale);
+			float cy = py + (cameraFacing.y * 4 * scale);
+
+			shapeRenderer.circle(px, py, 1f * scale);
+
+			// Facing
+			shapeRenderer.rectLine(px, py, cx, cy, 1);
+
+			// Camera
+			shapeRenderer.setColor(0, 0, 1, 0.5f);
+			shapeRenderer.rectLine(
+				cx - (cameraPlane.x * 4 * scale),
+				cy - (cameraPlane.y * 4 * scale),
+				cx + (cameraPlane.x * 4 * scale),
+				cy + (cameraPlane.y * 4 * scale),
+				1
+			);
+		}
+
 		shapeRenderer.end();
+		Gdx.gl.glDisable(GL20.GL_BLEND);
+
 	}
 }
