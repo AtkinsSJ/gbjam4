@@ -31,4 +31,9 @@ public class MenuScene extends InputAdapter
 
 		batch.end();
 	}
+
+	@Override
+	public void dispose() {
+
+	}
 }
