@@ -78,17 +78,18 @@ public class PlayScene extends InputAdapter
 		}
 
 		playerFacingDirection = (playerFacingDirection + 360) % 360;
+		Gdx.app.debug("playerFacingDirection", playerFacingDirection + "");
 
 		cameraFacing.set(
 			MathUtils.cosDeg(playerFacingDirection) * cameraHalfWidth,
 			MathUtils.sinDeg(playerFacingDirection) * cameraHalfWidth
 		);
 		cameraPlane.set(
-			cameraFacing.y,
-			-cameraFacing.x
+			MathUtils.cosDeg(playerFacingDirection - 90f) * cameraHalfWidth,
+			MathUtils.sinDeg(playerFacingDirection - 90f) * cameraHalfWidth
 		);
-		float dirX = (cameraFacing.x > 0) ? 1 : -1;
-		float dirY = (cameraFacing.y > 0) ? 1 : -1;
+		int dirX = (cameraFacing.x > 0) ? 1 : -1;
+		int dirY = (cameraFacing.y > 0) ? 1 : -1;
 
 		if (Gdx.input.isKeyPressed(Input.Keys.W) || Gdx.input.isKeyPressed(Input.Keys.UP)) {
 			if (levelGeometry[(int)(playerPosition.x + dirX)][(int)(playerPosition.y)] == 0) {
@@ -122,18 +123,14 @@ public class PlayScene extends InputAdapter
 		// http://lodev.org/cgtutor/raycasting.html
 		{
 
-			Gdx.app.debug("Raytracing", "PlayerFacing angle: " + playerFacingDirection);
-			Gdx.app.debug("Raytracing", "CameraFacing angle: " + cameraFacing.angle());
-			Gdx.app.debug("Raytracing", "CameraPlane angle: " + cameraPlane.angle());
-			Gdx.app.debug("---", "---");
-
 			for (int rayIndex = 0; rayIndex < GBJam4.SCREEN_WIDTH; rayIndex++) {
-				float rayCameraX = (float)(2 * rayIndex) / screenHalfWidth - 1;
+				float rayCameraX = 2 * rayIndex / screenWidth - 1;
 				rayPos.set(playerPosition);
 				rayDir.set(
 					dirX + cameraPlane.x * rayCameraX,
 					dirY + cameraPlane.y * rayCameraX
 				);
+//				Gdx.app.debug("Raycast", "Ray #" + rayIndex + ", angle " + rayDir.angle());
 
 				int mapX = (int) rayPos.x,
 					mapY = (int) rayPos.y;
@@ -206,6 +203,7 @@ public class PlayScene extends InputAdapter
 			}
 		}
 
+		Gdx.app.debug("Raycast", "Done!");
 //////////////////////////////////////
 //		rayStep.set(MathUtils.cosDeg(playerFacingDirection), MathUtils.sinDeg(playerFacingDirection));
 //
