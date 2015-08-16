@@ -36,9 +36,18 @@ public class PlayScene extends InputAdapter
 	private boolean debugRenderingEnabled = false;
 	private final boolean visibleTiles[][];
 	private final GBImage strawberry;
+	private final GBImage wall;
 
 	private void setColor(ShapeRenderer shapeRenderer, Palette color) {
 		shapeRenderer.setColor(color.r, color.g, color.b, 1);
+	}
+
+	private GBImage gbImage(String fileName) {
+		Pixmap pixmap = new Pixmap(Gdx.files.internal(fileName));
+		GBImage image = new GBImage(pixmap);
+		pixmap.dispose();
+
+		return image;
 	}
 
 	public PlayScene(GBJam4 game) {
@@ -46,9 +55,8 @@ public class PlayScene extends InputAdapter
 
 		Pixmap pixmap = new Pixmap(Gdx.files.internal("level.png"));
 
-		Pixmap strawberryPix = new Pixmap(Gdx.files.internal("strawberry.png"));
-		strawberry = new GBImage(strawberryPix);
-		strawberryPix.dispose();
+		strawberry = gbImage("strawberry.png");
+		wall = gbImage("wall.png");
 
 		levelWidth = pixmap.getWidth();
 		levelHeight = pixmap.getHeight();
@@ -61,8 +69,8 @@ public class PlayScene extends InputAdapter
 				int pixel = pixmap.getPixel(x,y);
 				switch (pixel) {
 					case 0x000000ff: levelGeometry[x][y] = 1;  break;
-					case 0xffff00ff: playerPosition.set(x, y); break;
-					case 0xff0000ff: entities.add(new Entity(x,y, strawberry)); break;
+					case 0xffff00ff: playerPosition.set(x + 0.5f, y + 0.5f); break;
+					case 0xff0000ff: entities.add(new Entity(x+0.5f, y+0.5f, strawberry)); break;
 				}
 			}
 		}
@@ -112,6 +120,15 @@ public class PlayScene extends InputAdapter
 				}
 				if (levelGeometry[(int) (playerPosition.x)][(int) (playerPosition.y - cameraFacing.y)] == 0) {
 					playerPosition.y -= MathUtils.sinDeg(playerFacingDirection) * delta;
+				}
+			}
+
+			for (int entityIndex=0; entityIndex < entities.size; entityIndex++) {
+				Entity entity = entities.get(entityIndex);
+				float dist2 = Math.abs(entity.x - playerPosition.x) + Math.abs(entity.y - playerPosition.y);
+				if (dist2 < 0.7f) {
+					entities.removeIndex(entityIndex);
+					entityIndex++;
 				}
 			}
 		}
@@ -204,19 +221,48 @@ public class PlayScene extends InputAdapter
 				} else {
 					perpWallDist = Math.abs((mapY - rayPos.y + (1 - stepY) / 2f) / rayDir.y);
 				}
+				depth[rayIndex] = perpWallDist;
 
 				int lineHeight = Math.abs((int) (screenHeight / perpWallDist));
 				lineHeight = MathUtils.clamp(lineHeight, 2, (int) screenHeight);
-
-				if (sideHitIsY) {
-					setColor(shapeRenderer, Palette.Dark);
-				} else {
-					setColor(shapeRenderer, Palette.Black);
-				}
+				int bottom = (GBJam4.SCREEN_HEIGHT - lineHeight) / 2;
 
 				// Draw wall
-				shapeRenderer.rect(rayIndex, (GBJam4.SCREEN_HEIGHT - lineHeight) / 2, 1, lineHeight);
-				depth[rayIndex] = perpWallDist;
+				if (false) {
+					float wallX;
+					if (sideHitIsY) {
+						wallX = rayPos.x + ((mapX - rayPos.y + (1 - stepY) / 2f) / rayDir.y) * rayDir.x;
+					} else {
+						wallX = rayPos.y + ((mapX - rayPos.x + (1 - stepX) / 2f) / rayDir.x) * rayDir.y;
+					}
+					wallX -= (int)wallX;
+					if (wallX < 0) wallX++;
+
+					int texX = (int)(wallX * wall.width);
+
+					// Flip
+					if ((sideHitIsY && rayDir.y < 0)
+					|| (!sideHitIsY && rayDir.x < 0)) {
+						texX = wall.width - texX - 1;
+					}
+
+					// Draw it!
+					for (int y=0; y<lineHeight; y++) {
+						int texY = wall.height - 1 - (y * wall.height / lineHeight);
+//						Gdx.app.debug("Raycast wall", "texX,Y = " + texX + ", " + texY);
+						Palette pixel = wall.data[texX][texY];
+						setColor(shapeRenderer, pixel);
+						shapeRenderer.rect(rayIndex, bottom+y, 1, 1);
+					}
+
+				} else {
+					if (sideHitIsY) {
+						setColor(shapeRenderer, Palette.Dark);
+					} else {
+						setColor(shapeRenderer, Palette.Black);
+					}
+					shapeRenderer.rect(rayIndex, bottom, 1, lineHeight);
+				}
 			}
 		}
 
