@@ -236,7 +236,7 @@ public class PlayScene extends InputAdapter
 				float relY = entity.y - playerPosition.y;
 
 				float invDet = 1.0f / (cameraPlane.x * cameraFacing.y - cameraPlane.y * cameraFacing.x);
-				float transformX = invDet * (cameraFacing.y * relX - cameraFacing.y * relY);
+				float transformX = invDet * (cameraFacing.y * relX - cameraFacing.x * relY);
 				float transformY = invDet * (cameraPlane.x * relY - cameraPlane.y * relX);
 
 				int spriteScreenCentreX = (int)(screenHalfWidth * (1 + transformX / transformY));
@@ -282,23 +282,24 @@ public class PlayScene extends InputAdapter
 			for (int x = 0; x < levelWidth; x++) {
 				for (int y = 0; y < levelHeight; y++) {
 
-					if (visibleTiles[x][y]) {
+					/*if (visibleTiles[x][y]) {
 						shapeRenderer.setColor(1, 1, 1, 0.5f);
 						shapeRenderer.rect(x*scale, y*scale, 1*scale, 1*scale);
-					} else if (levelGeometry[x][y] > 0) {
+					} else*/ if (levelGeometry[x][y] > 0) {
 						shapeRenderer.setColor(0, 0, 0, 0.5f);
 						shapeRenderer.rect(x*scale, y*scale, 1*scale, 1*scale);
 					}
 				}
 			}
 
+			// Player
 			shapeRenderer.setColor(1, 0, 0, 0.5f);
 			float px = playerPosition.x * scale;
 			float py = playerPosition.y * scale;
 			float cx = px + (cameraFacing.x * scale);
 			float cy = py + (cameraFacing.y * scale);
 
-			shapeRenderer.circle(px, py, 1f * scale);
+			shapeRenderer.circle(px, py, 0.3f * scale);
 
 			// Facing
 			shapeRenderer.rectLine(px, py, cx, cy, 1);
@@ -312,6 +313,12 @@ public class PlayScene extends InputAdapter
 				cy + (cameraPlane.y * scale),
 				1
 			);
+
+			// Entities
+			shapeRenderer.setColor(1,1,0,0.5f);
+			for (Entity entity : entities) {
+				shapeRenderer.circle(entity.x * scale, entity.y * scale, 0.3f * scale);
+			}
 		}
 
 		shapeRenderer.end();
