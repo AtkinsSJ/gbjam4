@@ -25,6 +25,7 @@ public class PlayScene extends InputAdapter
 
 	private final Vector2 playerPosition = new Vector2();
 	private float playerFacingDirection;
+	private final Array<GBImage> collectedFruit;
 
 	private final Array<Entity> entities;
 
@@ -103,6 +104,7 @@ public class PlayScene extends InputAdapter
 		compass = gbImage("compass.png");
 
 		entities = new Array<Entity>(128);
+		collectedFruit = new Array<GBImage>(fruit.length);
 
 //		loadLevelFromImageFile("level.png");
 		generateLevel(9, 9);
@@ -252,7 +254,12 @@ public class PlayScene extends InputAdapter
 				if (dist2 < 0.7f) {
 					entities.removeIndex(entityIndex);
 					entityIndex++;
+					collectedFruit.add(entity.image);
 				}
+			}
+
+			if (entities.size == 0) {
+				Gdx.app.debug("Game", "YOU WIN!");
 			}
 		}
 
@@ -436,18 +443,37 @@ public class PlayScene extends InputAdapter
 			}
 		}
 
+		// Collected fruit!
+		{
+			int left = 2;
+			int bottom = 2;
+
+			for (int fruitIndex = 0; fruitIndex < collectedFruit.size; fruitIndex++) {
+				GBImage f = collectedFruit.get(fruitIndex);
+
+				for (int x=0; x<f.width; x++) {
+					for (int y=0; y<f.height; y++) {
+						putPixel(shapeRenderer, left+x, bottom+y, f.data[x][y]);
+					}
+				}
+
+				left += 16 + 2;
+			}
+		}
+
 		// Compass!
 		{
-			int left = GBJam4.SCREEN_WIDTH - compass.width;
+			int left = GBJam4.SCREEN_WIDTH - compass.width - 2;
+			int bottom = 2;
 			for (int x=0; x<compass.width; x++) {
 				for (int y=0; y<compass.height; y++) {
-					putPixel(shapeRenderer, left+x, y, compass.data[x][y]);
+					putPixel(shapeRenderer, left+x, bottom+y, compass.data[x][y]);
 				}
 			}
 
 			// Draw line to North
 			float x = left + compass.width/2,
-				y = compass.height/2;
+				y = bottom + compass.height/2;
 			float dX = -cameraFacing.x,
 				dY = cameraFacing.y;
 
