@@ -37,9 +37,11 @@ public class PlayScene extends InputAdapter
 	private final Vector2 rayDir = new Vector2();
 	private final float[] depth = new float[GBJam4.SCREEN_WIDTH];
 
-	private boolean debugRenderingEnabled = true;
+	private boolean debugRenderingEnabled = false;
 	private boolean visibleTiles[][];
-	private final GBImage strawberry;
+
+	private final GBImage fruit[];
+
 	private final GBImage wall;
 	private final GBImage compass;
 	private static final float compassLineLength = 12f;
@@ -89,7 +91,14 @@ public class PlayScene extends InputAdapter
 	public PlayScene(GBJam4 game) {
 		this.game = game;
 
-		strawberry = gbImage("strawberry.png");
+		fruit = new GBImage[] {
+			gbImage("apple.png"),
+			gbImage("banana.png"),
+			gbImage("grapes.png"),
+			gbImage("orange.png"),
+			gbImage("strawberry.png"),
+		};
+
 		wall = gbImage("wall.png");
 		compass = gbImage("compass.png");
 
@@ -107,13 +116,15 @@ public class PlayScene extends InputAdapter
 		levelGeometry = new int[levelWidth][levelHeight];
 		visibleTiles = new boolean[levelWidth][levelHeight];
 
+		int fruitIndex = 0;
+
 		for (int y=0; y<pixmap.getWidth(); y++) {
 			for (int x=0; x<pixmap.getHeight(); x++) {
 				int pixel = pixmap.getPixel(x,y);
 				switch (pixel) {
 					case 0x000000ff: levelGeometry[x][y] = 1;  break;
 					case 0xffff00ff: playerPosition.set(x + 0.5f, y + 0.5f); break;
-					case 0xff0000ff: entities.add(new Entity(x+0.5f, y+0.5f, strawberry)); break;
+					case 0xff0000ff: entities.add(new Entity(x+0.5f, y+0.5f, fruit[fruitIndex++ % fruit.length])); break;
 				}
 			}
 		}
@@ -179,13 +190,13 @@ public class PlayScene extends InputAdapter
 		// Place fruit
 		Set<Coord> takenPositions = new HashSet<Coord>();
 		takenPositions.add(start);
-		for (int i=0; i<5; i++) {
+		for (int fruitIndex=0; fruitIndex<fruit.length; fruitIndex++) {
 			Coord pos = new Coord(random.nextInt(width), random.nextInt(height));
 			while (takenPositions.contains(pos)) {
 				pos.x = random.nextInt(width);
 				pos.y = random.nextInt(height);
 			}
-			entities.add(new Entity(pos.x * 2 + 1.5f, pos.y * 2 + 1.5f, strawberry));
+			entities.add(new Entity(pos.x * 2 + 1.5f, pos.y * 2 + 1.5f, fruit[fruitIndex]));
 			takenPositions.add(pos);
 		}
 	}
