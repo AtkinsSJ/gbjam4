@@ -107,7 +107,7 @@ public class PlayScene extends InputAdapter
 		collectedFruit = new Array<GBImage>(fruit.length);
 
 //		loadLevelFromImageFile("level.png");
-		generateLevel(9, 9);
+		generateLevel(7, 7);
 	}
 
 	private void loadLevelFromImageFile(String filename) {
