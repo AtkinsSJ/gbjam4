@@ -22,6 +22,9 @@ public enum Palette {
 	}
 
 	public static Palette find(int pixelValue) {
+		// FIXME: Currently we ignore thr red channel because it was coming out as negative and complicating things!
+		// For now, that's fine as we only have 4 colours and can easily differentiate them, but it's something to bear in mind.
+
 		int r = (pixelValue & 0xff000000) / 0x01000000;
 		int g = (pixelValue & 0x00ff0000) / 0x00010000;
 		int b = (pixelValue & 0x0000ff00) / 0x00000100;

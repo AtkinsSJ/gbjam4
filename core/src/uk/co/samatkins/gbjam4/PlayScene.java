@@ -42,10 +42,12 @@ public class PlayScene extends InputAdapter
 	private boolean visibleTiles[][];
 
 	private final GBImage fruit[];
-
 	private final GBImage wall;
 	private final GBImage compass;
 	private static final float compassLineLength = 12f;
+
+	private final GBImage tooth;
+	private float munchStage;
 
 	private static class Coord {
 		int x, y;
@@ -81,6 +83,22 @@ public class PlayScene extends InputAdapter
 		}
 	}
 
+	private void drawImage(ShapeRenderer shapeRenderer, int left, int bottom, GBImage image) {
+		for (int x=0; x<image.width; x++) {
+			for (int y=0; y<image.height; y++) {
+				putPixel(shapeRenderer, left+x, bottom+y, image.data[x][y]);
+			}
+		}
+	}
+
+	private void drawImageUpsideDown(ShapeRenderer shapeRenderer, int left, int bottom, GBImage image) {
+		for (int x=0; x<image.width; x++) {
+			for (int y=0; y<image.height; y++) {
+				putPixel(shapeRenderer, left+x, bottom+y, image.data[x][image.height - y - 1]);
+			}
+		}
+	}
+
 	private GBImage gbImage(String fileName) {
 		Pixmap pixmap = new Pixmap(Gdx.files.internal(fileName));
 		GBImage image = new GBImage(pixmap);
@@ -101,6 +119,7 @@ public class PlayScene extends InputAdapter
 		};
 
 		wall = gbImage("wall.png");
+		tooth = gbImage("tooth.png");
 		compass = gbImage("compass.png");
 
 		entities = new Array<Entity>(128);
@@ -443,6 +462,26 @@ public class PlayScene extends InputAdapter
 			}
 		}
 
+		// TEETH!
+		{
+			munchStage += delta;
+			int stage = MathUtils.round(Math.abs(MathUtils.sin(munchStage)) * screenHalfHeight);
+
+			setColor(shapeRenderer, Palette.Dark);
+			shapeRenderer.rect(0, GBJam4.SCREEN_HEIGHT - stage + tooth.height,
+				GBJam4.SCREEN_WIDTH, stage - tooth.height);
+			shapeRenderer.rect(0, 0,
+				GBJam4.SCREEN_WIDTH, stage - tooth.height);
+
+			int toothCount = MathUtils.ceil(screenWidth / (float) tooth.width);
+
+			for (int toothIndex=0; toothIndex<toothCount; toothIndex++) {
+				int left = toothIndex * tooth.width;
+				drawImage(shapeRenderer, left, GBJam4.SCREEN_HEIGHT - stage, tooth);
+				drawImageUpsideDown(shapeRenderer, left, stage - tooth.height, tooth);
+			}
+		}
+
 		// Collected fruit!
 		{
 			int left = 2;
@@ -451,11 +490,7 @@ public class PlayScene extends InputAdapter
 			for (int fruitIndex = 0; fruitIndex < collectedFruit.size; fruitIndex++) {
 				GBImage f = collectedFruit.get(fruitIndex);
 
-				for (int x=0; x<f.width; x++) {
-					for (int y=0; y<f.height; y++) {
-						putPixel(shapeRenderer, left+x, bottom+y, f.data[x][y]);
-					}
-				}
+				drawImage(shapeRenderer, left, bottom, f);
 
 				left += 16 + 2;
 			}
@@ -465,11 +500,7 @@ public class PlayScene extends InputAdapter
 		{
 			int left = GBJam4.SCREEN_WIDTH - compass.width - 2;
 			int bottom = 2;
-			for (int x=0; x<compass.width; x++) {
-				for (int y=0; y<compass.height; y++) {
-					putPixel(shapeRenderer, left+x, bottom+y, compass.data[x][y]);
-				}
-			}
+			drawImage(shapeRenderer, left, bottom, compass);
 
 			// Draw line to North
 			float x = left + compass.width/2,
