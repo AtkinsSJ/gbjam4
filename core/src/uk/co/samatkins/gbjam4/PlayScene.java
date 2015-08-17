@@ -41,6 +41,8 @@ public class PlayScene extends InputAdapter
 	private boolean visibleTiles[][];
 	private final GBImage strawberry;
 	private final GBImage wall;
+	private final GBImage compass;
+	private static final float compassLineLength = 12f;
 
 	private static class Coord {
 		int x, y;
@@ -69,6 +71,13 @@ public class PlayScene extends InputAdapter
 		shapeRenderer.setColor(color.r, color.g, color.b, 1);
 	}
 
+	private void putPixel(ShapeRenderer shapeRenderer, int x, int y, Palette color) {
+		if (color != Palette.Transparent) {
+			shapeRenderer.setColor(color.r, color.g, color.b, 1);
+			shapeRenderer.rect(x, y, 1, 1);
+		}
+	}
+
 	private GBImage gbImage(String fileName) {
 		Pixmap pixmap = new Pixmap(Gdx.files.internal(fileName));
 		GBImage image = new GBImage(pixmap);
@@ -82,6 +91,8 @@ public class PlayScene extends InputAdapter
 
 		strawberry = gbImage("strawberry.png");
 		wall = gbImage("wall.png");
+		compass = gbImage("compass.png");
+
 		entities = new Array<Entity>(128);
 
 //		loadLevelFromImageFile("level.png");
@@ -349,9 +360,7 @@ public class PlayScene extends InputAdapter
 					for (int y=0; y<lineHeight; y++) {
 						int texY = wall.height - 1 - (y * wall.height / lineHeight);
 //						Gdx.app.debug("Raycast wall", "texX,Y = " + texX + ", " + texY);
-						Palette pixel = wall.data[texX][texY];
-						setColor(shapeRenderer, pixel);
-						shapeRenderer.rect(rayIndex, bottom+y, 1, 1);
+						putPixel(shapeRenderer, rayIndex, bottom + y, wall.data[texX][texY]);
 					}
 
 				} else {
@@ -408,16 +417,33 @@ public class PlayScene extends InputAdapter
 						&& stripe < GBJam4.SCREEN_WIDTH)
 					{
 						for (int y=0; y<size; y++) {
-							int texY = entity.image.height - 1 - (y * entity.image.height / size);
-
-							Palette pixel = entity.image.data[texX][texY];
-							if (pixel != Palette.Transparent) {
-								setColor(shapeRenderer, pixel);
-								shapeRenderer.rect(stripe, bottom+y, 1, 1);
-							}
+							int texY = y * entity.image.height / size;
+							putPixel(shapeRenderer, stripe, bottom+y, entity.image.data[texX][texY]);
 						}
 					}
 				}
+			}
+		}
+
+		// Compass!
+		{
+			int left = GBJam4.SCREEN_WIDTH - compass.width;
+			for (int x=0; x<compass.width; x++) {
+				for (int y=0; y<compass.height; y++) {
+					putPixel(shapeRenderer, left+x, y, compass.data[x][y]);
+				}
+			}
+
+			// Draw line to North
+			float x = left + compass.width/2,
+				y = compass.height/2;
+			float dX = -cameraFacing.x,
+				dY = cameraFacing.y;
+
+			for (int i=0; i<compassLineLength * 2; i++) {
+				x += dX;
+				y += dY;
+				putPixel(shapeRenderer, (int)x, (int)y, Palette.Black);
 			}
 		}
 
