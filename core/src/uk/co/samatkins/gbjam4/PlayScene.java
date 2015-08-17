@@ -11,13 +11,17 @@ import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.utils.Array;
 
+import java.util.HashSet;
+import java.util.Random;
+import java.util.Set;
+
 public class PlayScene extends InputAdapter
 	implements GBJam4.Scene {
 
 	private final GBJam4 game;
 
-	private final int levelWidth, levelHeight;
-	private final int levelGeometry[][];
+	private int levelWidth, levelHeight;
+	private int levelGeometry[][];
 
 	private final Vector2 playerPosition = new Vector2();
 	private float playerFacingDirection;
@@ -33,10 +37,33 @@ public class PlayScene extends InputAdapter
 	private final Vector2 rayDir = new Vector2();
 	private final float[] depth = new float[GBJam4.SCREEN_WIDTH];
 
-	private boolean debugRenderingEnabled = false;
-	private final boolean visibleTiles[][];
+	private boolean debugRenderingEnabled = true;
+	private boolean visibleTiles[][];
 	private final GBImage strawberry;
 	private final GBImage wall;
+
+	private static class Coord {
+		int x, y;
+
+		public Coord(int x, int y) {
+			this.x = x;
+			this.y = y;
+		}
+	}
+
+	public enum Direction {
+		N(0,1),
+		E(1,0),
+		S(0,-1),
+		W(-1,0);
+
+		public final int x, y;
+
+		Direction(int x, int y) {
+			this.x = x;
+			this.y = y;
+		}
+	}
 
 	private void setColor(ShapeRenderer shapeRenderer, Palette color) {
 		shapeRenderer.setColor(color.r, color.g, color.b, 1);
@@ -53,16 +80,21 @@ public class PlayScene extends InputAdapter
 	public PlayScene(GBJam4 game) {
 		this.game = game;
 
-		Pixmap pixmap = new Pixmap(Gdx.files.internal("level.png"));
-
 		strawberry = gbImage("strawberry.png");
 		wall = gbImage("wall.png");
+		entities = new Array<Entity>(128);
+
+//		loadLevelFromImageFile("level.png");
+		generateLevel(9, 9);
+	}
+
+	private void loadLevelFromImageFile(String filename) {
+		Pixmap pixmap = new Pixmap(Gdx.files.internal(filename));
 
 		levelWidth = pixmap.getWidth();
 		levelHeight = pixmap.getHeight();
 		levelGeometry = new int[levelWidth][levelHeight];
 		visibleTiles = new boolean[levelWidth][levelHeight];
-		entities = new Array<Entity>(128);
 
 		for (int y=0; y<pixmap.getWidth(); y++) {
 			for (int x=0; x<pixmap.getHeight(); x++) {
@@ -76,6 +108,75 @@ public class PlayScene extends InputAdapter
 		}
 
 		pixmap.dispose();
+	}
+
+	private void generateLevel(int width, int height) {
+		levelWidth = 2 * width + 1;
+		levelHeight = 2 * height + 1;
+		levelGeometry = new int[levelWidth][levelHeight];
+		visibleTiles = new boolean[levelWidth][levelHeight];
+
+		// Fill with walls
+		for (int y=0; y<levelHeight; y++) {
+			for (int x=0; x<levelWidth; x++) {
+				levelGeometry[x][y] = 1;
+			}
+		}
+
+		// Perfect maze generation
+		Random random = new Random(System.currentTimeMillis());
+		Array<Coord> tiles = new Array<Coord>(false, width*height);
+		Array<Direction> validDirections = new Array<Direction>(false, 4);
+
+		Coord start = new Coord(random.nextInt(width), random.nextInt(height));
+		tiles.add(start);
+		levelGeometry[(start.x * 2 + 1)][(start.y * 2 + 1)] = 0;
+
+		while (tiles.size > 0) {
+			// Get a random edge tile, try and connect it.
+			int tileIndex = random.nextInt(tiles.size);
+			Coord t = tiles.get(tileIndex);
+
+			for (Direction direction : Direction.values()) {
+				int x = (t.x + direction.x) * 2 + 1,
+					y = (t.y + direction.y) * 2 + 1;
+				if (x >= 0 && x < levelWidth && y >= 0 && y < levelHeight
+					&& levelGeometry[x][y] > 0) {
+					validDirections.add(direction);
+				}
+			}
+
+			// If all 4 sides are taken, remove this tile!
+			if (validDirections.size == 0) {
+				tiles.removeIndex(tileIndex);
+			} else {
+				// Otherwise, pick a random direction
+				Direction direction = validDirections.get(random.nextInt(validDirections.size));
+				Coord newTile = new Coord(t.x + direction.x, t.y + direction.y);
+				tiles.add(newTile);
+
+				// Dig the path
+				levelGeometry[(t.x * 2 + 1 + direction.x)][(t.y * 2 + 1 + direction.y)] = 0;
+				levelGeometry[(newTile.x * 2 + 1)][(newTile.y * 2 + 1)] = 0;
+			}
+			validDirections.clear();
+		}
+
+		// Level should be a perfect maze now!
+		// Place player
+		playerPosition.set(start.x * 2 + 1.5f, start.y * 2 + 1.5f);
+		// Place fruit
+		Set<Coord> takenPositions = new HashSet<Coord>();
+		takenPositions.add(start);
+		for (int i=0; i<5; i++) {
+			Coord pos = new Coord(random.nextInt(width), random.nextInt(height));
+			while (takenPositions.contains(pos)) {
+				pos.x = random.nextInt(width);
+				pos.y = random.nextInt(height);
+			}
+			entities.add(new Entity(pos.x * 2 + 1.5f, pos.y * 2 + 1.5f, strawberry));
+			takenPositions.add(pos);
+		}
 	}
 
 	@Override
@@ -134,8 +235,6 @@ public class PlayScene extends InputAdapter
 		}
 
 		if (debugRenderingEnabled) {
-			Gdx.app.debug("playerFacingDirection", playerFacingDirection + "");
-
 			Gdx.gl.glEnable(GL20.GL_BLEND);
 			Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
 
