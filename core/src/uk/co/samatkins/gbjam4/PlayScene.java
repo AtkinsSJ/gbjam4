@@ -296,10 +296,6 @@ public class PlayScene extends InputAdapter
 					munchStage = 540;
 				}
 			}
-
-			if (entities.size == 0) {
-				Gdx.app.debug("Game", "YOU WIN!");
-			}
 		}
 
 		if (debugRenderingEnabled) {
@@ -586,6 +582,11 @@ public class PlayScene extends InputAdapter
 		shapeRenderer.end();
 		if (debugRenderingEnabled) {
 			Gdx.gl.glDisable(GL20.GL_BLEND);
+		}
+
+		if (munchStage <= 0 && entities.size == 0) {
+			Gdx.app.debug("Game", "YOU WIN!");
+			game.winGame();
 		}
 	}
 

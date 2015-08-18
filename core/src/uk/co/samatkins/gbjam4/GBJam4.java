@@ -39,7 +39,7 @@ public class GBJam4 extends ApplicationAdapter {
 
 		textureAtlas = new TextureAtlas("packed.atlas");
 
-		setScene(new MenuScene(this));
+		showMenu();
 	}
 
 	@Override
@@ -76,7 +76,15 @@ public class GBJam4 extends ApplicationAdapter {
 //		this.scene.onCreate();
 	}
 
+	public void showMenu() {
+		setScene(new MenuScene(this));
+	}
+
 	public void startGame() {
 		setScene(new PlayScene(this));
+	}
+
+	public void winGame() {
+		setScene(new YouWinScene(this));
 	}
 }

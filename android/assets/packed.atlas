@@ -1,12 +1,19 @@
 
 packed.png
-size: 256,256
+size: 512,256
 format: RGBA8888
 filter: Nearest,Nearest
 repeat: none
 menu
   rotate: false
   xy: 2, 2
+  size: 160, 144
+  orig: 160, 144
+  offset: 0, 0
+  index: -1
+youwin
+  rotate: false
+  xy: 164, 2
   size: 160, 144
   orig: 160, 144
   offset: 0, 0
