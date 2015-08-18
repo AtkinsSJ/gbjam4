@@ -56,6 +56,24 @@ public class PlayScene extends InputAdapter
 			this.x = x;
 			this.y = y;
 		}
+
+		@Override
+		public boolean equals(Object o) {
+			if (this == o) return true;
+			if (o == null || getClass() != o.getClass()) return false;
+
+			Coord coord = (Coord) o;
+
+			return x == coord.x && y == coord.y;
+
+		}
+
+		@Override
+		public int hashCode() {
+			int result = x;
+			result = 31 * result + y;
+			return result;
+		}
 	}
 
 	public enum Direction {
@@ -274,6 +292,8 @@ public class PlayScene extends InputAdapter
 					entities.removeIndex(entityIndex);
 					entityIndex++;
 					collectedFruit.add(entity.image);
+
+					munchStage = 540;
 				}
 			}
 
@@ -463,9 +483,12 @@ public class PlayScene extends InputAdapter
 		}
 
 		// TEETH!
+		if (munchStage > 0)
 		{
-			munchStage += delta;
-			int stage = MathUtils.round(Math.abs(MathUtils.sin(munchStage)) * screenHalfHeight);
+			munchStage -= delta * 360;
+			if (munchStage < 0) munchStage = 0;
+
+			int stage = MathUtils.round(Math.abs(MathUtils.sinDeg(munchStage)) * screenHalfHeight);
 
 			setColor(shapeRenderer, Palette.Dark);
 			shapeRenderer.rect(0, GBJam4.SCREEN_HEIGHT - stage + tooth.height,
